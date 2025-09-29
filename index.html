@@ -4,52 +4,105 @@
 <meta charset="utf-8">
 <title>VAMSA VRUKSHAM</title>
 <style>
-body { font-family: Arial; margin: 20px; }
-h2 { text-align: center; margin-bottom: 6px; }
+body {
+  font-family: Arial, sans-serif;
+  margin: 10px;
+  padding: 0;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+h2 {
+  text-align: center;
+  margin-bottom: 10px;
+  font-size: 20px;
+}
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px 30px;
-  max-width: 900px;
-  margin: auto;
-  align-items: center;
+  grid-template-columns: 1fr;
+  gap: 12px;
 }
-.field { display: flex; align-items: center; gap: 10px; }
-.field label { width: 160px; font-weight: bold; }
-.field input { flex: 1; padding: 6px; }
-.required::after { content: " *"; color: red; }
+.field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.field label {
+  font-weight: bold;
+  font-size: 16px;
+  white-space: nowrap;
+  width: 120px;
+}
+.field input {
+  flex: 1;
+  padding: 10px;
+  font-size: 16px;
+}
+.required::after {
+  content: " *";
+  color: red;
+}
 .message {
-  grid-column: span 2;
-  text-align: left;
   font-weight: bold;
   color: blue;
   margin-bottom: 12px;
 }
 .actions {
-  grid-column: span 2;
   text-align: center;
   margin-top: 10px;
 }
 button {
-  padding: 8px 18px;
-  font-size: 14px;
+  padding: 10px 20px;
+  font-size: 16px;
   border-radius: 6px;
   border: none;
   background: #007bff;
   color: #fff;
   cursor: pointer;
+  width: 100%;
 }
-button.skip { background: #ff9800; }
+button.skip {
+  background: #ff9800;
+}
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+.search-row label {
+  font-weight: bold;
+  font-size: 16px;
+  white-space: nowrap;
+}
+.search-row input {
+  flex: 1;
+  padding: 10px;
+  font-size: 16px;
+}
+table {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+}
+table th, table td {
+  padding: 8px;
+  border: 1px solid #ccc;
+  text-align: left;
+}
+table th {
+  background: #f0f0f0;
+  cursor: pointer;
+}
 </style>
 </head>
 <body>
 <h2 id="formTitle">VAMSA VRUKSHAM</h2>
-<div style="height:12px;"></div>
+
+<div id="lblMsg" class="message"></div>
 
 <form id="familyForm">
 <div class="grid">
-  <div id="lblMsg" class="message"></div>
-
   <div class="field">
     <label for="mid">1. MId:</label>
     <input type="text" id="mid" name="mid" readonly>
@@ -66,13 +119,28 @@ button.skip { background: #ff9800; }
     <datalist id="namesList"></datalist>
   </div>
 
-  <div class="field"><label></label></div>
   <div class="actions"><button type="submit" id="btnSave">Save</button></div>
 </div>
 </form>
 
+<div class="search-row">
+  <label for="searchBox">Search:</label>
+  <input type="text" id="searchBox" placeholder="Search by name or surname...">
+</div>
+
+<table id="recordsTable">
+  <thead>
+    <tr>
+      <th onclick="sortTable(0)">Mid ⬍</th>
+      <th onclick="sortTable(1)">Surname ⬍</th>
+      <th onclick="sortTable(2)">Name ⬍</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
 <script>
-const midField = document.getElementById("mid");
 document.addEventListener("DOMContentLoaded", function(){
 const scriptURL = "https://script.google.com/macros/s/AKfycbwZZrIPcM0X3T41D6pMfsMhzMSGewY6AB3Cj8QS-4EUdaDmzsIoSmx_JlOKKEui1JHGFg/exec";
 const lblMsg = document.getElementById("lblMsg"),
@@ -85,7 +153,7 @@ const lblMsg = document.getElementById("lblMsg"),
 
 const memberConsent = "I would like to be a member of our family tree. I am giving the required information: 1. Surname, 2. Full Name, 3. Date of Birth / Age, 4. Mother's Name, 5. Spouse Name if married, 6. Place of Birth, 7. No. of Children and other optionals if I desired. I am also giving the details of my relatives as far as I know. I will inform them about this and ask them to correct it.";
 const nameMsg = "If any nick name put in brackets () at end.";
-const duplicate = "is already registered. You can add your nick name if any in brackets () at end.";
+const duplicateMsg = "is already registered. So add your nick name or your mother's membership Id in brackets () at end.";
 
 function showMsg(text, color) {
   lblMsg.style.color = color || "black";
@@ -99,12 +167,14 @@ function initForm() {
     .then(r => r.json())
     .then(js => {
       if (js.status === "ok") {
-        midField.value = js.nextId || ""; // ← corrected from nextMid to nextId
+        midField.value = js.nextId || "";
         if (js.lastSurname) surnameField.value = js.lastSurname;
       } else showMsg(js.message, "red");
+      loadRecords();
     })
     .catch(() => {
       showMsg(memberConsent + " (Note: Could not connect to server for MId)", "blue");
+      loadRecords();
     });
 }
 
@@ -124,7 +194,7 @@ fetch(scriptURL + "?action=getNames")
 
 form.addEventListener("submit", ev => {
   ev.preventDefault();
-  showMsg("", "black");
+
   const surname = surnameField.value.trim(),
         name = nameField.value.trim();
 
@@ -143,10 +213,12 @@ form.addEventListener("submit", ev => {
     .then(r => r.json())
     .then(dup => {
       if (dup) {
-        showMsg(`${surname} + ${name} ${duplicate}`, "blue");
+        const fullName = `${surname} ${name}`;
+        showMsg(`${fullName} ${duplicateMsg}`, "blue");
         btnSave.textContent = "Skip";
         btnSave.classList.add("skip");
       } else {
+        showMsg("", "black");
         performSave(false);
       }
     })
@@ -176,7 +248,18 @@ function performSave(skip) {
     })
     .catch(() => showMsg("Error connecting to server (POST)", "red"));
 }
-});
-</script>
-</body>
-</html>
+
+function loadRecords() {
+  fetch(scriptURL + "?action=getAll")
+    .then(r => r.json())
+    .then(data => {
+      const tbody = document.querySelector("#recordsTable tbody");
+      tbody.innerHTML = "";
+      data.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${row.mid}</td>
+          <td>${row.surname}</td>
+          <td>${row.name}</td>
+          <td>
+            <span style="cursor:pointer;color:blue;"
