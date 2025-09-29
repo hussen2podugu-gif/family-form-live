@@ -1,100 +1,181 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="utf-8">
 <title>VAMSA VRUKSHAM</title>
 <style>
 body { font-family: Arial; margin: 20px; }
-h2 { text-align: center; }
-#lblMsg { text-align: left; margin: 10px auto 20px auto; font-weight:bold; color:blue; max-width:700px; display:block; }
-.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:15px 40px; max-width:700px; margin:auto; }
-.form-grid label { font-weight:bold; }
-.form-grid input { width:90%; padding:6px; }
-.btn-container { grid-column: span 2; text-align:center; }
-button { padding:10px 20px; border:none; border-radius:6px; background-color:#4CAF50; color:white; cursor:pointer; }
-table { width:100%; border-collapse:collapse; margin-top:30px; max-width:700px; margin:auto; }
-th, td { border:1px solid #ddd; padding:8px; text-align:left; }
-th { background-color:#f2f2f2; cursor:pointer; }
-.action-btn { cursor:pointer; margin-right:8px; }
-.action-col { width:80px; text-align:center; }
+h2 { text-align: center; margin-bottom: 6px; }
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 30px;
+  max-width: 900px;
+  margin: auto;
+  align-items: center;
+}
+.field { display: flex; align-items: center; gap: 10px; }
+.field label { width: 160px; font-weight: bold; }
+.field input { flex: 1; padding: 6px; }
+.required::after { content: " *"; color: red; }
+.message {
+  grid-column: span 2;
+  text-align: left;
+  font-weight: bold;
+  color: blue;
+  margin-bottom: 12px;
+}
+.actions {
+  grid-column: span 2;
+  text-align: center;
+  margin-top: 10px;
+}
+button {
+  padding: 8px 18px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: none;
+  background: #007bff;
+  color: #fff;
+  cursor: pointer;
+}
+button.skip { background: #ff9800; }
 </style>
 </head>
 <body>
-<h2>VAMSA VRUKSHAM</h2>
-<div id="lblMsg"></div>
+<h2 id="formTitle">VAMSA VRUKSHAM</h2>
+<div style="height:12px;"></div>
 
-<div class="form-grid">
-  <div>
-    <label for="surname">Surname:</label><br>
-    <input type="text" id="surname">
+<form id="familyForm">
+<div class="grid">
+  <div id="lblMsg" class="message"></div>
+
+  <div class="field">
+    <label for="mid">1. MId:</label>
+    <input type="text" id="mid" name="mid" readonly>
   </div>
-  <div>
-    <label for="name">Name:</label><br>
-    <input type="text" id="name">
+
+  <div class="field">
+    <label for="surname" class="required">2. Surname:</label>
+    <input type="text" id="surname" name="surname" required>
   </div>
-  <div class="btn-container">
-    <button onclick="saveData()">Save</button>
+
+  <div class="field">
+    <label for="name" class="required">3. Name:</label>
+    <input list="namesList" id="name" name="name" required>
+    <datalist id="namesList"></datalist>
   </div>
+
+  <div class="field"><label></label></div>
+  <div class="actions"><button type="submit" id="btnSave">Save</button></div>
 </div>
-
-<h3 style="max-width:700px; margin:auto;">Saved Records</h3>
-<table id="dataTable">
-  <thead>
-    <tr>
-      <th class="action-col">Actions</th>
-      <th>MId</th>
-      <th>Surname</th>
-      <th>Name</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+</form>
 
 <script>
-const eligibility = "I would like to be a member of our family tree. I am giving the required information: 1. Surname, 2. Full Name, 3. Date of Birth / Age, 4. Mother's Name, 5. Spouse Name if married, 6. Place of Birth, 7. No. of Children and other optionals if I desired. I am also giving the details of my relatives as far as I know. I will inform them about this and ask them to correct it.";
+document.addEventListener("DOMContentLoaded", function(){
+const scriptURL = "https://script.google.com/macros/s/AKfycbwZZrIPcM0X3T41D6pMfsMhzMSGewY6AB3Cj8QS-4EUdaDmzsIoSmx_JlOKKEui1JHGFg/exec";
+const lblMsg = document.getElementById("lblMsg"),
+      midField = document.getElementById("mid"),
+      surnameField = document.getElementById("surname"),
+      nameField = document.getElementById("name"),
+      namesList = document.getElementById("namesList"),
+      form = document.getElementById("familyForm"),
+      btnSave = document.getElementById("btnSave");
 
-window.onload = function(){
-  document.getElementById("lblMsg").innerText = eligibility;
-  loadTable();
-};
+const memberConsent = "I would like to be a member of our family tree. I am giving the required information: 1. Surname, 2. Full Name, 3. Date of Birth / Age, 4. Mother's Name, 5. Spouse Name if married, 6. Place of Birth, 7. No. of Children and other optionals if I desired. I am also giving the details of my relatives as far as I know. I will inform them about this and ask them to correct it.";
+const nameMsg = "If any nick name put in brackets () at end.";
+const duplicate = "is already registered. You can add your nick name if any in brackets () at end.";
 
-function saveData(){
-  const surname = document.getElementById("surname").value.trim();
-  const name = document.getElementById("name").value.trim();
-  google.script.run.withSuccessHandler(function(res){
-    document.getElementById("lblMsg").innerText = res.message;
-    document.getElementById("lblMsg").style.color = res.message.startsWith("✅") ? "green" : "blue";
-    loadTable();
-    document.getElementById("surname").value = "";
-    document.getElementById("name").value = "";
-  }).saveRecord({surname,name});
+function showMsg(text, color) {
+  lblMsg.style.color = color || "black";
+  lblMsg.textContent = text;
 }
 
-function loadTable(){
-  google.script.run.withSuccessHandler(function(data){
-    const tbody = document.querySelector("#dataTable tbody");
-    tbody.innerHTML = "";
-    if(!data || data.length === 0){
-      tbody.innerHTML = "<tr><td colspan='4'>No records found</td></tr>";
-      return;
-    }
-    data.forEach(row=>{
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="action-col">
-          <span class="action-btn" onclick="editRecord(${row.MId})">✏️</span>
-          <span class="action-btn" onclick="deleteRecord(${row.MId})">🗑️</span>
-        </td>
-        <td>${row.MId}</td>
-        <td>${row.Surname}</td>
-        <td>${row.Name}</td>
-      `;
-      tbody.appendChild(tr);
+function initForm() {
+  showMsg(memberConsent, "blue"); // Always show consent first
+
+  fetch(scriptURL + "?action=getNextId")
+    .then(r => r.json())
+    .then(js => {
+      if (js.status === "ok") {
+        midField.value = js.nextMid || "";
+        if (js.lastSurname) surnameField.value = js.lastSurname;
+      } else showMsg(js.message, "red");
+    })
+    .catch(() => {
+      showMsg(memberConsent + " (Note: Could not connect to server for MId)", "blue");
     });
-  }).getRecords();
 }
 
-function editRecord(id){ alert("Edit MId: "+id); }
-function deleteRecord(id){ alert("Delete MId: "+id); }
+initForm();
+
+fetch(scriptURL + "?action=getNames")
+  .then(r => r.json())
+  .then(list => {
+    namesList.innerHTML = "";
+    if (Array.isArray(list)) {
+      list.forEach(n => {
+        namesList.appendChild(Object.assign(document.createElement("option"), { value: n }));
+      });
+    }
+  })
+  .catch(() => console.log("Could not load names list"));
+
+form.addEventListener("submit", ev => {
+  ev.preventDefault();
+  showMsg("", "black");
+  const surname = surnameField.value.trim(),
+        name = nameField.value.trim();
+
+  if (!surname || !name) {
+    showMsg("Surname and Name are mandatory.", "red");
+    return;
+  }
+
+  if (btnSave.textContent === "Skip") {
+    performSave(true);
+    restoreSave();
+    return;
+  }
+
+  fetch(scriptURL + "?action=checkDuplicate&surname=" + encodeURIComponent(surname) + "&name=" + encodeURIComponent(name))
+    .then(r => r.json())
+    .then(dup => {
+      if (dup) {
+        showMsg(`${surname} + ${name} ${duplicate}`, "blue");
+        btnSave.textContent = "Skip";
+        btnSave.classList.add("skip");
+      } else {
+        performSave(false);
+      }
+    })
+    .catch(() => showMsg("Error connecting to server (duplicate check).", "red"));
+});
+
+function restoreSave() {
+  btnSave.textContent = "Save";
+  btnSave.classList.remove("skip");
+}
+
+function performSave(skip) {
+  const fd = new FormData(form);
+  if (skip) fd.append("skip", "1");
+
+  fetch(scriptURL, { method: "POST", body: fd })
+    .then(r => r.json())
+    .then(js => {
+      if (js.status === "success") {
+        showMsg(js.message + " " + nameMsg, "green");
+        form.reset();
+        restoreSave();
+        initForm();
+      } else if (js.status === "error") {
+        showMsg(js.message || "Save failed", "red");
+      } else showMsg("Unexpected response", "red");
+    })
+    .catch(() => showMsg("Error connecting to server (POST)", "red"));
+}
+});
 </script>
 </body>
 </html>
