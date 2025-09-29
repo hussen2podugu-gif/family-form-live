@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>VAMSA VRUKSHAM</title>
+<style>
+body { font-family: Arial; margin: 20px; }
+h2 { text-align: center; }
+#lblMsg { text-align: left; margin: 10px auto 20px auto; font-weight:bold; color:blue; max-width:700px; display:block; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:15px 40px; max-width:700px; margin:auto; }
+.form-grid label { font-weight:bold; }
+.form-grid input { width:90%; padding:6px; }
+.btn-container { grid-column: span 2; text-align:center; }
+button { padding:10px 20px; border:none; border-radius:6px; background-color:#4CAF50; color:white; cursor:pointer; }
+table { width:100%; border-collapse:collapse; margin-top:30px; max-width:700px; margin:auto; }
+th, td { border:1px solid #ddd; padding:8px; text-align:left; }
+th { background-color:#f2f2f2; cursor:pointer; }
+.action-btn { cursor:pointer; margin-right:8px; }
+.action-col { width:80px; text-align:center; }
+</style>
+</head>
+<body>
+<h2>VAMSA VRUKSHAM</h2>
+<div id="lblMsg"></div>
+
+<div class="form-grid">
+  <div>
+    <label for="surname">Surname:</label><br>
+    <input type="text" id="surname">
+  </div>
+  <div>
+    <label for="name">Name:</label><br>
+    <input type="text" id="name">
+  </div>
+  <div class="btn-container">
+    <button onclick="saveData()">Save</button>
+  </div>
+</div>
+
+<h3 style="max-width:700px; margin:auto;">Saved Records</h3>
+<table id="dataTable">
+  <thead>
+    <tr>
+      <th class="action-col">Actions</th>
+      <th>MId</th>
+      <th>Surname</th>
+      <th>Name</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+const eligibility = "I would like to be a member of our family tree. I am giving the required information: 1. Surname, 2. Full Name, 3. Date of Birth / Age, 4. Mother's Name, 5. Spouse Name if married, 6. Place of Birth, 7. No. of Children and other optionals if I desired. I am also giving the details of my relatives as far as I know. I will inform them about this and ask them to correct it.";
+
+window.onload = function(){
+  document.getElementById("lblMsg").innerText = eligibility;
+  loadTable();
+};
+
+function saveData(){
+  const surname = document.getElementById("surname").value.trim();
+  const name = document.getElementById("name").value.trim();
+  google.script.run.withSuccessHandler(function(res){
+    document.getElementById("lblMsg").innerText = res.message;
+    document.getElementById("lblMsg").style.color = res.message.startsWith("✅") ? "green" : "blue";
+    loadTable();
+    document.getElementById("surname").value = "";
+    document.getElementById("name").value = "";
+  }).saveRecord({surname,name});
+}
+
+function loadTable(){
+  google.script.run.withSuccessHandler(function(data){
+    const tbody = document.querySelector("#dataTable tbody");
+    tbody.innerHTML = "";
+    if(!data || data.length === 0){
+      tbody.innerHTML = "<tr><td colspan='4'>No records found</td></tr>";
+      return;
+    }
+    data.forEach(row=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="action-col">
+          <span class="action-btn" onclick="editRecord(${row.MId})">✏️</span>
+          <span class="action-btn" onclick="deleteRecord(${row.MId})">🗑️</span>
+        </td>
+        <td>${row.MId}</td>
+        <td>${row.Surname}</td>
+        <td>${row.Name}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }).getRecords();
+}
+
+function editRecord(id){ alert("Edit MId: "+id); }
+function deleteRecord(id){ alert("Delete MId: "+id); }
+</script>
+</body>
+</html>
