@@ -1,102 +1,100 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Family Form</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #eef;
-      padding: 20px;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 5px;
-    }
-    #lblError {
-      text-align: center;
-      color: #d9534f;
-      font-weight: bold;
-      margin-bottom: 20px;
-    }
-    form {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      max-width: 400px;
-      margin: auto;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    select, input[type="text"] {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      box-sizing: border-box;
-    }
-    button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-  </style>
+<title>VAMSA VRUKSHAM</title>
+<style>
+body { font-family: Arial; margin: 20px; }
+h2 { text-align: center; }
+#lblMsg { text-align: left; margin: 10px auto 20px auto; font-weight:bold; color:blue; max-width:700px; display:block; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:15px 40px; max-width:700px; margin:auto; }
+.form-grid label { font-weight:bold; }
+.form-grid input { width:90%; padding:6px; }
+.btn-container { grid-column: span 2; text-align:center; }
+button { padding:10px 20px; border:none; border-radius:6px; background-color:#4CAF50; color:white; cursor:pointer; }
+table { width:100%; border-collapse:collapse; margin-top:30px; max-width:700px; margin:auto; }
+th, td { border:1px solid #ddd; padding:8px; text-align:left; }
+th { background-color:#f2f2f2; cursor:pointer; }
+.action-btn { cursor:pointer; margin-right:8px; }
+.action-col { width:80px; text-align:center; }
+</style>
 </head>
 <body>
-  <h2>Family Data Entry</h2>
-  <div id="lblError">Note: Surname, Name are mandatory</div>
+<h2>VAMSA VRUKSHAM</h2>
+<div id="lblMsg"></div>
 
-  <form action="https://script.google.com/macros/s/AKfycbyetf4IdmQvrNebPgDEsoxHe-Xy-m4Za0bnth0NF66medIgM-bp_kFJXlDyF5SXceEnoQ/exec" method="POST" target="hidden_iframe" onsubmit="return handleSubmit();">
-    <label for="language">Output Language:</label>
-    <select id="language" name="language" required>
-      <option value="">-- Select Language --</option>
-      <option value="English">English</option>
-      <option value="Telugu">Telugu</option>
-      <option value="Hindi">Hindi</option>
-      <option value="Urdu">Urdu</option>
-    </select>
+<div class="form-grid">
+  <div>
+    <label for="surname">Surname:</label><br>
+    <input type="text" id="surname">
+  </div>
+  <div>
+    <label for="name">Name:</label><br>
+    <input type="text" id="name">
+  </div>
+  <div class="btn-container">
+    <button onclick="saveData()">Save</button>
+  </div>
+</div>
 
-    <label for="surname">Surname:</label>
-    <input type="text" id="surname" name="surname" required>
+<h3 style="max-width:700px; margin:auto;">Saved Records</h3>
+<table id="dataTable">
+  <thead>
+    <tr>
+      <th class="action-col">Actions</th>
+      <th>MId</th>
+      <th>Surname</th>
+      <th>Name</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
 
-    <label for="name">Name:</label>
-    <input type="text" id="name" name="name" required>
+<script>
+const eligibility = "I would like to be a member of our family tree. I am giving the required information: 1. Surname, 2. Full Name, 3. Date of Birth / Age, 4. Mother's Name, 5. Spouse Name if married, 6. Place of Birth, 7. No. of Children and other optionals if I desired. I am also giving the details of my relatives as far as I know. I will inform them about this and ask them to correct it.";
 
-    <button type="submit">Submit</button>
-  </form>
+window.onload = function(){
+  document.getElementById("lblMsg").innerText = eligibility;
+  loadTable();
+};
 
-  <iframe name="hidden_iframe" style="display:none;" onload="handleIframeLoad();"></iframe>
+function saveData(){
+  const surname = document.getElementById("surname").value.trim();
+  const name = document.getElementById("name").value.trim();
+  google.script.run.withSuccessHandler(function(res){
+    document.getElementById("lblMsg").innerText = res.message;
+    document.getElementById("lblMsg").style.color = res.message.startsWith("✅") ? "green" : "blue";
+    loadTable();
+    document.getElementById("surname").value = "";
+    document.getElementById("name").value = "";
+  }).saveRecord({surname,name});
+}
 
-  <script>
-    function handleSubmit() {
-      const language = document.getElementById("language").value.trim();
-      const surname = document.getElementById("surname").value.trim();
-      const name = document.getElementById("name").value.trim();
-      const lblError = document.getElementById("lblError");
-
-      if (!language || !surname || !name) {
-        lblError.style.color = "#d9534f";
-        lblError.textContent = "❌ All fields are required. Please fill in Output Language, Surname, and Name.";
-        return false;
-      }
-
-      lblError.style.color = "#007bff";
-      lblError.textContent = "⏳ Submitting...";
-      return true;
+function loadTable(){
+  google.script.run.withSuccessHandler(function(data){
+    const tbody = document.querySelector("#dataTable tbody");
+    tbody.innerHTML = "";
+    if(!data || data.length === 0){
+      tbody.innerHTML = "<tr><td colspan='4'>No records found</td></tr>";
+      return;
     }
+    data.forEach(row=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="action-col">
+          <span class="action-btn" onclick="editRecord(${row.MId})">✏️</span>
+          <span class="action-btn" onclick="deleteRecord(${row.MId})">🗑️</span>
+        </td>
+        <td>${row.MId}</td>
+        <td>${row.Surname}</td>
+        <td>${row.Name}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }).getRecords();
+}
 
-    function handleIframeLoad() {
-      const lblError = document.getElementById("lblError");
-      lblError.style.color = "green";
-      lblError.textContent = "✅ Record submitted. Please check the sheet.";
-    }
-  </script>
+function editRecord(id){ alert("Edit MId: "+id); }
+function deleteRecord(id){ alert("Delete MId: "+id); }
+</script>
 </body>
 </html>
