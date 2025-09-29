@@ -73,7 +73,7 @@ button.skip { background: #ff9800; }
 
 <script>
 document.addEventListener("DOMContentLoaded", function(){
-const scriptURL = "https://script.google.com/macros/s/AKfycbwZZrIPcM0X3T41D6pMfsMhzMSGewY6AB3Cj8QS-4EUdaDmzsIoSmx_JlOKKEui1JHGFg/exec"; // ← Replace with your deployed Web App URL
+const scriptURL = "https://script.google.com/macros/s/AKfycbwZZrIPcM0X3T41D6pMfsMhzMSGewY6AB3Cj8QS-4EUdaDmzsIoSmx_JlOKKEui1JHGFg/exec";
 const lblMsg = document.getElementById("lblMsg"),
       midField = document.getElementById("mid"),
       surnameField = document.getElementById("surname"),
@@ -98,7 +98,7 @@ function initForm() {
     .then(r => r.json())
     .then(js => {
       if (js.status === "ok") {
-        midField.value = js.nextMid || "";
+        midField.value = js.nextId || ""; // ← corrected from nextMid to nextId
         if (js.lastSurname) surnameField.value = js.lastSurname;
       } else showMsg(js.message, "red");
     })
